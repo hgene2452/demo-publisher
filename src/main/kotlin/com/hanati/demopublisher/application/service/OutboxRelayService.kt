@@ -4,6 +4,7 @@ import com.hanati.demopublisher.application.port.inbound.RelayOutboxUseCase
 import com.hanati.demopublisher.application.port.outbound.LoadPendingOutboxEventsPort
 import com.hanati.demopublisher.application.port.outbound.PublishEventPort
 import com.hanati.demopublisher.application.port.outbound.UpdateOutboxEventPort
+import com.hanati.demopublisher.domain.RelayStage
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
@@ -30,21 +31,22 @@ class OutboxRelayService(
      *   중복 제거는 컨슈머 Inbox(event_id 멱등성)가 담당.
      */
     @Transactional
-    override fun relay() {
-        val events = loadPendingOutboxEventsPort.loadPendingEvents(batchSize)
+    override fun relay(stage: RelayStage) {
+        val events = loadPendingOutboxEventsPort.loadPendingEvents(stage.fromStatus, batchSize)
         if (events.isEmpty()) return
 
         var published = 0
         for (event in events) {
             try {
-                publishEventPort.publish(event)
-                updateOutboxEventPort.markPublished(event.id)
+                // 발행 이벤트 타입은 스테이지가 결정 (MintRequested / MintConfirmed)
+                publishEventPort.publish(event.copy(eventType = stage.publishEventType))
+                updateOutboxEventPort.advanceStatus(event.id, stage.toStatus)
                 published++
             } catch (e: Exception) {
-                log.error("outbox publish failed. id={}, type={}", event.id, event.eventType, e)
+                log.error("outbox publish failed. stage={}, id={}", stage, event.id, e)
                 updateOutboxEventPort.markRetryOrFail(event.id, maxRetry)
             }
         }
-        log.info("outbox relay done. fetched={}, published={}", events.size, published)
+        log.info("outbox relay done. stage={}, fetched={}, published={}", stage, events.size, published)
     }
 }

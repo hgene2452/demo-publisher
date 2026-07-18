@@ -49,13 +49,20 @@ docker compose up -d
 ## 테스트용 이벤트 삽입
 
 ```sql
+-- 1단계: 민트 신청 이벤트 삽입 (비즈니스 tx 역할)
 INSERT INTO outbox_event (aggregate_type, aggregate_id, event_type, payload)
-VALUES ('Remittance', 'RMT-0001', 'RemittanceRequested',
-        '{"remittanceId": "RMT-0001", "amount": 1000000, "currency": "KRW"}');
+VALUES ('Mint', 'MINT-0001', 'Mint',
+        '{"remittanceId": "MINT-0001", "amount": 1000000, "currency": "KRW"}');
+-- → 1초 내 MintRequested 발행, status = MINT_REQUESTED 확인
+
+-- 2단계: 외부 확정 시뮬레이션 (실제로는 입금/체인 확인 로직이 수행)
+UPDATE outbox_event SET status = 'MINT_CONFIRM_PENDING' WHERE aggregate_id = 'MINT-0001';
+-- → 1초 내 MintConfirmed 발행, status = MINT_COMPLETED 확인
 ```
 
 ```bash
 # 확인
 docker compose exec kafka /opt/kafka/bin/kafka-console-consumer.sh \
-  --bootstrap-server localhost:9092 --topic outbox-events --from-beginning
+  --bootstrap-server localhost:9092 --topic outbox-events --from-beginning \
+  --property print.headers=true
 ```

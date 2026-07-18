@@ -1,6 +1,7 @@
 package com.hanati.demopublisher.application.port.outbound
 
 import com.hanati.demopublisher.domain.OutboxEvent
+import com.hanati.demopublisher.domain.OutboxStatus
 
 /**
  * Outbound Port: PENDING 이벤트 조회.
@@ -8,5 +9,5 @@ import com.hanati.demopublisher.domain.OutboxEvent
  * 멀티 인스턴스 환경에서도 중복 폴링을 방지해야 한다.
  */
 interface LoadPendingOutboxEventsPort {
-    fun loadPendingEvents(limit: Int): List<OutboxEvent>
+    fun loadPendingEvents(status: OutboxStatus, limit: Int): List<OutboxEvent>
 }
