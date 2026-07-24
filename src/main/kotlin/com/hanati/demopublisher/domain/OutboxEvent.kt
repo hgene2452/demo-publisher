@@ -3,8 +3,8 @@ package com.hanati.demopublisher.domain
 import java.time.Instant
 
 /**
- * 아웃박스 이벤트 도메인 모델.
- * 어댑터(JPA 엔티티)와 분리하여 도메인이 인프라에 의존하지 않도록 한다.
+ * 도메인 모델 : jpa/kafka를 전혀 모르는 순수 kotlin
+ * 어댑터가 갈아끼워져도(예 : posgres -> oracle) 이 파일은 불변
  */
 data class OutboxEvent(
     val id: Long,
